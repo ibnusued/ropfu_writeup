@@ -20,6 +20,7 @@ Key Observations:
     32-bit LSB: We are working with the x86 architecture.
 
     The Vulnerability: Looking at the source code, we see the gets() function.
+    ![image alt](src/source_code.png)
 
         Red Flag: gets() does not perform bounds checking. This allows us to overwrite the return address on the stack, leading to a stack-based buffer overflow.
 
