@@ -1,15 +1,15 @@
 Bypassing NX with ROP: A Deep Dive into picoCTF 'Ropfu'
 
-While solving Binary Exploitation challenges on picoCTF, I encountered Ropfu, a "hard" difficulty challenge. While many public writeups solve this by jumping to shellcode—possible here because the NX (No-Execute) bit is disabled—this isn't very "real-world."
+While solving Binary Exploitation challenges on picoCTF, I encountered Ropfu, a "hard" difficulty challenge. 
+While many public writeups solve this by jumping to shellcode—possible here because the NX (No-Execute) bit is disabled—this isn't very "real-world."
 
-In a modern production environment, the NX bit is almost always enabled. To make this a true learning experience, I decided to solve it using Return-Oriented Programming (ROP). By chaining together existing code snippets within the binary (known as gadgets), we can achieve a shell even if the stack is non-executable.
+In a modern production environment, the NX bit is almost always enabled. To make this a true learning experience, I decided to solve it using Return-Oriented Programming (ROP). 
+By chaining together existing code snippets within the binary (known as gadgets), we can achieve a shell even if the stack is non-executable.
+
 Phase 1: Initial Reconnaissance
 
 First, we download the source code and the binary. Our first step is to analyze the file properties:
-Bash
-
-file ropfu
-# Output: ELF 32-bit LSB executable, Intel 80386, statically linked, for GNU/Linux ...
+![image_alt] https://raw.githubusercontent.com/ibnusued/ropfu_writeup/refs/heads/src/file_info.png
 
 Key Observations:
 
