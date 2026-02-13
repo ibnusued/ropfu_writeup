@@ -9,6 +9,8 @@ By chaining together existing code snippets within the binary (known as gadgets)
 Phase 1: Initial Reconnaissance
 
 First, we download the source code and the binary. Our first step is to analyze the file properties:
+
+
 ![image alt](https://raw.githubusercontent.com/ibnusued/ropfu_writeup/refs/heads/main/src/file_info.png)
 
 Key Observations:
