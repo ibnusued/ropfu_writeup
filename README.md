@@ -36,6 +36,9 @@ However, if NX (No-Execute) were enabled, the CPU would refuse to execute code s
 
 
 The Power of int 0x80
+
+
+
 ![image alt](src/int.png)
 
 Our goal is to execute execve("/bin/sh", NULL, NULL). On 32-bit Linux, we trigger this via a software interrupt: int 0x80. To make this work, we must setup the registers as follows:
@@ -88,3 +91,7 @@ Conclusion: The "Real World" Lesson
 By using ROP, we have bypassed the need for an executable stack. Even if the administrators had turned on every protection (NX, Stack Canaries, etc.), as long as we have a buffer overflow and enough gadgets, the binary can be forced to exploit itself.
 
 In this challenge, the static linking of the binary provided us with over 30,000 gadgets, making it trivial to find exactly what we needed. In dynamically linked binaries, we would first need to "leak" the address of the C library (libc) to find these gadgets, but the core principle remains the same.
+
+Result:-
+
+![image alt](src/int.png)
