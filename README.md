@@ -94,4 +94,4 @@ In this challenge, the static linking of the binary provided us with over 30,000
 
 Result:-
 
-![image alt](src/result.png)
+![image alt](src/result2.png)
