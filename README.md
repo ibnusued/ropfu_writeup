@@ -32,7 +32,11 @@ Phase 2: The Strategy - Why ROP?
 In a typical "easy" CTF, you might find a win() function that prints the flag. You simply overwrite the return address with the address of win(). In other cases, you might inject shellcode into the stack and jump to it.
 
 However, if NX (No-Execute) were enabled, the CPU would refuse to execute code stored on the stack. ROP (Return-Oriented Programming) bypasses this by using code that is already marked as "executable" within the binary's code segment.
+
+
+
 The Power of int 0x80
+![image alt](src/int.png)
 
 Our goal is to execute execve("/bin/sh", NULL, NULL). On 32-bit Linux, we trigger this via a software interrupt: int 0x80. To make this work, we must setup the registers as follows:
 Register	Value	Purpose
