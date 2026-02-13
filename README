@@ -1,0 +1,112 @@
+This is an excellent topic for a blog post. You’ve highlighted a crucial distinction in binary exploitation: the difference between executing **shellcode** (which fails under NX protection) and **Return-Oriented Programming (ROP)**, which remains effective by using the binary’s own code against itself.
+
+Here is a professionally rewritten version of your writeup, optimized for a technical blog.
+
+---
+
+# Bypassing NX with ROP: A Deep Dive into picoCTF 'Ropfu'
+
+While solving Binary Exploitation challenges on **picoCTF**, I encountered **Ropfu**, a "hard" difficulty challenge. While many public writeups solve this by jumping to shellcode—possible here because the **NX (No-Execute)** bit is disabled—this isn't very "real-world."
+
+In a modern production environment, the NX bit is almost always enabled. To make this a true learning experience, I decided to solve it using **Return-Oriented Programming (ROP)**. By chaining together existing code snippets within the binary (known as gadgets), we can achieve a shell even if the stack is non-executable.
+
+## Phase 1: Initial Reconnaissance
+
+First, we download the source code and the binary. Our first step is to analyze the file properties:
+
+```bash
+file ropfu
+# Output: ELF 32-bit LSB executable, Intel 80386, statically linked, for GNU/Linux ...
+
+```
+
+### Key Observations:
+
+* **Statically Linked:** This is a goldmine. Since all libraries are compiled directly into the binary, we have a massive pool of instructions to use as ROP gadgets.
+* **32-bit LSB:** We are working with the x86 architecture.
+* **The Vulnerability:** Looking at the source code, we see the `gets()` function.
+> **Red Flag:** `gets()` does not perform bounds checking. This allows us to overwrite the return address on the stack, leading to a stack-based buffer overflow.
+
+
+
+---
+
+## Phase 2: Understanding the Strategy
+
+Since there is no `win()` function to print the flag, we must spawn a shell. Our goal is to perform a system call to `execve("/bin/sh", NULL, NULL)`.
+
+### The Power of `int 0x80`
+
+On 32-bit Linux, `int 0x80` is the instruction used to trigger a system call. To get a shell, we must populate the registers as follows:
+
+| Register | Value | Purpose |
+| --- | --- | --- |
+| **EAX** | `11` | The syscall number for `execve` |
+| **EBX** | Pointer to `"/bin/sh"` | The program to execute |
+| **ECX** | `0` | Argument array (NULL) |
+| **EDX** | `0` | Environment array (NULL) |
+
+### Finding Gadgets
+
+To load these values into registers, we look for **POP** instructions followed by a **RET**.
+
+* **POP [Register]:** Takes the value from the top of the stack and places it in the register.
+* **RET:** Jumps to the next address on the stack, allowing us to "chain" multiple gadgets together.
+
+---
+
+## Phase 3: Building the ROP Chain
+
+We use `ropper` or `ROPgadget` to find the necessary pieces of our puzzle.
+
+```bash
+ropper --file ropfu --search "pop eax; ret"
+ropper --file ropfu --search "pop ebx; pop ecx; pop edx; ret"
+ropper --file ropfu --search "int 0x80"
+
+```
+
+We also need a place to store the string `"/bin/sh"`. Since the binary is statically linked, we can write this string into a writable data section (like `.data` or `.bss`) using a "move" gadget (e.g., `mov [edx], eax`).
+
+---
+
+## Phase 4: The Exploit Script
+
+Using `pwntools`, we can automate the process. First, we find the offset to the return address (the "padding"), then we layout our chain.
+
+```python
+from pwn import *
+
+# Context for 32-bit
+context.binary = './ropfu'
+
+p = process('./ropfu')
+elf = ELF('./ropfu')
+
+# 1. Find the padding (e.g., 28 bytes)
+padding = b"A" * 28
+
+# 2. Construct the ROP Chain
+# Find a writable memory address
+data_addr = elf.get_section_by_name('.data').header.sh_addr
+
+rop = ROP(elf)
+# We can use pwntools' ROP builder or manual gadgets
+# Here is the conceptual flow:
+# Write "/bin/sh" to data_addr
+# Set EAX = 11, EBX = data_addr, ECX = 0, EDX = 0
+# Trigger int 0x80
+
+payload = padding + rop.chain()
+p.sendline(payload)
+p.interactive()
+
+```
+
+---
+
+## Conclusion
+
+By using ROP, we bypassed the need for shellcode entirely. This demonstrates why the **NX bit** alone isn't enough to stop an exploit; if a binary is large enough (like this statically linked one), it provides all the "building blocks" an attacker needs to construct their own logic.
+
+**Would you like me to help you refine the Python exploit script specifically for the picoCTF environment?**
